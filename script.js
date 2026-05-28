@@ -4,7 +4,7 @@ const wrap = document.getElementById('canvas-wrap');
 
 //Field Image
 const fieldImg = new Image();
-fieldImg.src = 'images/field2026.png'; // path relative to index.html
+fieldImg.src = 'images/FE-2026-_REBUILT_Playing_Field_With_Fuel_With_Background.png'; // path relative to index.html
 fieldImg.onload = () => draw();
 
 let poses = [];
@@ -60,8 +60,32 @@ function setMode(m) {
 function setPathMode(m) {
   pathMode = m;
   document.getElementById('pm-bezier-s').classList.toggle('active', m==='bezier');
+  document.getElementById('pm-cubic-s').classList.toggle('active', m==='cubic');
   document.getElementById('pm-linear-s').classList.toggle('active', m==='linear');
   draw();
+}
+
+function cubicBezierCP(p0, p1) {
+  const d = Math.hypot(p1.x - p0.x, p1.y - p0.y) * 0.33;
+  return {
+    cp0x: p0.x + Math.cos(p0.heading) * d, cp0y: p0.y + Math.sin(p0.heading) * d,
+    cp1x: p1.x - Math.cos(p1.heading) * d, cp1y: p1.y - Math.sin(p1.heading) * d
+  };
+}
+
+function drawCubicPath(poses, ctx, toCanvas) {
+  if (poses.length < 2) return;
+  ctx.beginPath();
+  const c0 = toCanvas(poses[0].x, poses[0].y);
+  ctx.moveTo(c0.x, c0.y);
+  
+  for (let i = 0; i < poses.length - 1; i++) {
+    const cp = cubicBezierCP(poses[i], poses[i + 1]);
+    const c1 = toCanvas(poses[i+1].x, poses[i+1].y);
+    const a = toCanvas(cp.cp0x, cp.cp0y), b = toCanvas(cp.cp1x, cp.cp1y);
+    ctx.bezierCurveTo(a.x, a.y, b.x, b.y, c1.x, c1.y);
+  }
+  ctx.stroke();
 }
 
 function clearAll() {
@@ -76,7 +100,7 @@ function refreshTypes() {
 }
 
 function addPose(fx, fy) {
-  const p = { id: idCounter++, x: fx, y: fy, heading: 0, name: `Pose ${idCounter}`, type: 'waypoint' };
+  const p = { id: idCounter++, x: fx, y: fy, heading: 0, name: `Pose ${idCounter}`, type: 'waypoint', cpDist: 1.0 };
   poses.push(p);
   refreshTypes();
   selected = p.id;
@@ -101,11 +125,24 @@ function getPoseAt(cx, cy, r = 18) {
   return null;
 }
 
+function getControlPointAt(cx, cy, r = 8) {
+  if (pathMode !== 'bezier' || poses.length < 2) return null;
+  for (let i = 0; i < poses.length - 1; i++) {
+    const cp = cpFor(poses[i], poses[i+1]);
+    const a = toCanvas(cp.cp0x, cp.cp0y), b = toCanvas(cp.cp1x, cp.cp1y);
+    if (Math.hypot(cx - a.x, cy - a.y) < r) return { type: 'cp0', segmentIdx: i, poseIdx: i };
+    if (Math.hypot(cx - b.x, cy - b.y) < r) return { type: 'cp1', segmentIdx: i, poseIdx: i+1 };
+  }
+  return null;
+}
+
 function cpFor(p0, p1) {
-  const d = Math.hypot(p1.x - p0.x, p1.y - p0.y) * 0.4;
+  const baseDist = Math.hypot(p1.x - p0.x, p1.y - p0.y) * 0.4;
+  const d0 = baseDist * (p0.cpDist || 1.0);
+  const d1 = baseDist * (p1.cpDist || 1.0);
   return {
-    cp0x: p0.x + Math.cos(p0.heading) * d, cp0y: p0.y + Math.sin(p0.heading) * d,
-    cp1x: p1.x - Math.cos(p1.heading) * d, cp1y: p1.y - Math.sin(p1.heading) * d
+    cp0x: p0.x + Math.cos(p0.heading) * d0, cp0y: p0.y + Math.sin(p0.heading) * d0,
+    cp1x: p1.x - Math.cos(p1.heading) * d1, cp1y: p1.y - Math.sin(p1.heading) * d1
   };
 }
 
@@ -150,22 +187,27 @@ function draw() {
     ctx.save();
     ctx.strokeStyle = '#f472b6'; ctx.lineWidth = 2.5;
     ctx.shadowColor = '#f472b6aa'; ctx.shadowBlur = 10;
-    ctx.beginPath();
-    const c0 = toCanvas(poses[0].x, poses[0].y);
-    ctx.moveTo(c0.x, c0.y);
-    for (let i = 0; i < poses.length - 1; i++) {
-      const c1 = toCanvas(poses[i+1].x, poses[i+1].y);
-      if (pathMode === 'bezier') {
-        const cp = cpFor(poses[i], poses[i+1]);
-        const a = toCanvas(cp.cp0x, cp.cp0y), b = toCanvas(cp.cp1x, cp.cp1y);
-        ctx.bezierCurveTo(a.x, a.y, b.x, b.y, c1.x, c1.y);
-      } else {
-        ctx.lineTo(c1.x, c1.y);
+    if (pathMode === 'cubic') {
+      drawCubicPath(poses, ctx, toCanvas);
+    } else {
+      ctx.beginPath();
+      const c0 = toCanvas(poses[0].x, poses[0].y);
+      ctx.moveTo(c0.x, c0.y);
+      for (let i = 0; i < poses.length - 1; i++) {
+        const c1 = toCanvas(poses[i+1].x, poses[i+1].y);
+        if (pathMode === 'bezier') {
+          const cp = cpFor(poses[i], poses[i+1]);
+          const a = toCanvas(cp.cp0x, cp.cp0y), b = toCanvas(cp.cp1x, cp.cp1y);
+          ctx.bezierCurveTo(a.x, a.y, b.x, b.y, c1.x, c1.y);
+        } else {
+          ctx.lineTo(c1.x, c1.y);
+        }
       }
+      ctx.stroke();
     }
-    ctx.stroke(); ctx.restore();
+    ctx.restore();
 
-    // Bezier handles
+    // Bezier handles (not shown for cubic mode)
     if (pathMode === 'bezier') {
       for (let i = 0; i < poses.length - 1; i++) {
         const cp = cpFor(poses[i], poses[i+1]);
@@ -285,9 +327,15 @@ function exportJSON() {
 canvas.addEventListener('mousedown', e => {
   const rect = canvas.getBoundingClientRect();
   const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
+  const cp = getControlPointAt(cx, cy);
   const hit = getPoseAt(cx, cy);
   if (e.button === 1 || mode === 'pan') {
     panning = true; panStart = { x: cx - view.x, y: cy - view.y };
+    canvas.style.cursor = 'grabbing'; return;
+  }
+  if (cp && pathMode === 'bezier') {
+    const pose = poses[cp.poseIdx];
+    dragging = { type: 'controlPoint', cp: cp, pose: pose, ox: cx, oy: cy };
     canvas.style.cursor = 'grabbing'; return;
   }
   if (mode === 'add' && !hit) {
@@ -297,7 +345,7 @@ canvas.addEventListener('mousedown', e => {
   }
   if (hit) {
     selected = hit.id;
-    dragging = { pose: hit, ox: cx - toCanvas(hit.x, hit.y).x, oy: cy - toCanvas(hit.x, hit.y).y };
+    dragging = { type: 'pose', pose: hit, ox: cx - toCanvas(hit.x, hit.y).x, oy: cy - toCanvas(hit.x, hit.y).y };
     canvas.style.cursor = 'grabbing';
     updateSidebar(); draw();
   } else {
@@ -310,12 +358,37 @@ canvas.addEventListener('mousemove', e => {
   const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
   if (panning) { view.x = cx - panStart.x; view.y = cy - panStart.y; draw(); return; }
   if (dragging) {
-    const f = toField(cx - dragging.ox, cy - dragging.oy);
-    dragging.pose.x = Math.max(0, Math.min(FIELD_W, f.x));
-    dragging.pose.y = Math.max(0, Math.min(FIELD_H, f.y));
-    updateSidebar(); draw(); return;
+    if (dragging.type === 'controlPoint') {
+      const f = toField(cx, cy);
+      const pose = dragging.pose;
+      const cp = dragging.cp;
+      const otherPoseIdx = cp.type === 'cp0' ? cp.poseIdx + 1 : cp.poseIdx - 1;
+      if (otherPoseIdx >= 0 && otherPoseIdx < poses.length) {
+        const otherPose = poses[otherPoseIdx];
+        const baseDist = Math.hypot(otherPose.x - pose.x, otherPose.y - pose.y) * 0.4;
+        const distToPose = Math.hypot(f.x - pose.x, f.y - pose.y);
+        const vec = { x: f.x - pose.x, y: f.y - pose.y };
+        if (vec.x !== 0 || vec.y !== 0) {
+          pose.heading = Math.atan2(vec.y, vec.x);
+          pose.cpDist = baseDist > 0 ? distToPose / baseDist : 1.0;
+          pose.cpDist = Math.max(0.1, Math.min(5.0, pose.cpDist));
+        }
+      }
+      updateSidebar(); draw(); return;
+    } else {
+      const f = toField(cx - dragging.ox, cy - dragging.oy);
+      dragging.pose.x = Math.max(0, Math.min(FIELD_W, f.x));
+      dragging.pose.y = Math.max(0, Math.min(FIELD_H, f.y));
+      updateSidebar(); draw(); return;
+    }
   }
-  if (mode !== 'pan') canvas.style.cursor = getPoseAt(cx, cy) ? 'grab' : 'crosshair';
+  if (mode !== 'pan') {
+    if (getControlPointAt(cx, cy)) {
+      canvas.style.cursor = 'pointer';
+    } else {
+      canvas.style.cursor = getPoseAt(cx, cy) ? 'grab' : 'crosshair';
+    }
+  }
 });
 
 canvas.addEventListener('mouseup', () => {

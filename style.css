@@ -1,5 +1,5 @@
 *{box-sizing:border-box;margin:0;padding:0;}
-html,body{height:100%;overflow:hidden;background:#09050e;color:#f8edff;font-family:'Inter',sans-serif;}
+html,body{height:100%;overflow:hidden;background-color:#09050e;background-image:url('images/FE-2026-_REBUILT_Playing_Field_With_Fuel_With_Background.png');background-size:cover;background-position:center;background-repeat:no-repeat;color:#f8edff;font-family:'Inter',sans-serif;}
 #app{display:flex;height:100vh;width:100vw;}
 #sidebar{width:230px;min-width:230px;background:#09050d;border-right:1px solid #2d0d2c;display:flex;flex-direction:column;z-index:10;}
 #sidebar-header{padding:14px 16px 10px;border-bottom:1px solid #2d0d2c;}
