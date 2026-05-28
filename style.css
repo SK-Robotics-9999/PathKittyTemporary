@@ -1,0 +1,47 @@
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;background:#09050e;color:#f8edff;font-family:'Inter',sans-serif;}
+#app{display:flex;height:100vh;width:100vw;}
+#sidebar{width:230px;min-width:230px;background:#09050d;border-right:1px solid #2d0d2c;display:flex;flex-direction:column;z-index:10;}
+#sidebar-header{padding:14px 16px 10px;border-bottom:1px solid #2d0d2c;}
+#sidebar-header h1{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:#f472b6;letter-spacing:0.08em;text-transform:uppercase;}
+#sidebar-header p{font-size:10px;color:#b297c9;margin-top:2px;font-family:'JetBrains Mono',monospace;}
+#tools{padding:10px 10px 8px;border-bottom:1px solid #2d0d2c;}
+.tool-label{font-size:9px;color:#b295c6;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;}
+.tool-row{display:flex;gap:4px;flex-wrap:wrap;}
+.tool-btn{flex:1;min-width:58px;padding:6px 4px;background:#120819;border:1px solid #2d0d2c;border-radius:5px;color:#d8c9e9;font-size:10px;font-family:'JetBrains Mono',monospace;cursor:pointer;text-align:center;transition:all 0.15s;}
+.tool-btn:hover{background:#2a0f33;border-color:#f472b6;color:#f9c1e9;}
+.tool-btn.active{background:#40143f;border-color:#f472b6;color:#f9a8d4;}
+.tool-btn.danger{color:#fb7185;}
+.tool-btn.danger:hover{background:#300712;border-color:#fb7185;color:#fb7185;}
+#pose-list{flex:1;overflow-y:auto;padding:6px 0;}
+.section-label{padding:6px 14px 3px;font-size:9px;color:#9f83b7;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.1em;}
+.pose-item{padding:7px 12px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background 0.1s,border 0.1s;border-left:2px solid transparent;}
+.pose-item:hover{background:#120615;}
+.pose-item.selected{background:#340f3a;border-left-color:#f472b6;}
+.pose-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.pose-dot.start{background:#ec4899;}
+.pose-dot.end{background:#fb7185;}
+.pose-dot.waypoint{background:#f9a8d4;}
+.pose-info{flex:1;min-width:0;}
+.pose-name{font-size:11px;font-family:'JetBrains Mono',monospace;color:#f4e6ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pose-coords{font-size:9px;color:#b39bd6;font-family:'JetBrains Mono',monospace;margin-top:1px;}
+.pose-delete{opacity:0;font-size:13px;color:#fb7185;background:none;border:none;cursor:pointer;padding:0 2px;line-height:1;transition:opacity 0.15s;}
+.pose-item:hover .pose-delete{opacity:1;}
+#inspector{padding:10px;border-top:1px solid #2d0d2c;background:#0f0816;}
+#inspector h3{font-size:9px;color:#b296d0;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;}
+.insp-row{display:flex;gap:6px;margin-bottom:6px;align-items:center;}
+.insp-row label{font-size:10px;color:#c7b2e5;font-family:'JetBrains Mono',monospace;width:30px;flex-shrink:0;}
+.insp-row input{flex:1;background:#120819;border:1px solid #2d0d2c;border-radius:4px;color:#f8edff;font-size:11px;font-family:'JetBrains Mono',monospace;padding:4px 7px;outline:none;transition:border 0.15s;width:0;}
+.insp-row input:focus{border-color:#f472b6;}
+#canvas-wrap{flex:1;position:relative;overflow:hidden;}
+canvas{display:block;}
+#status{position:absolute;bottom:10px;left:10px;font-family:'JetBrains Mono',monospace;font-size:10px;color:#a37cbf;pointer-events:none;user-select:none;}
+#hint{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:#100613dd;border:1px solid #2d0d2c;border-radius:6px;padding:6px 14px;font-size:10px;font-family:'JetBrains Mono',monospace;color:#b9a2d6;pointer-events:none;white-space:nowrap;}
+#zoom-controls{position:absolute;bottom:10px;right:10px;display:flex;flex-direction:column;gap:4px;}
+.zoom-btn{width:28px;height:28px;background:#120819;border:1px solid #2d0d2c;border-radius:4px;color:#b9a1d6;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;font-family:'JetBrains Mono',monospace;}
+.zoom-btn:hover{background:#2a0f33;color:#f9c1e9;border-color:#f472b6;}
+#export-btn{margin:8px 10px 10px;padding:7px;background:#3b0f3a;border:1px solid #8b5cf6;border-radius:5px;color:#f9c1e9;font-size:10px;font-family:'JetBrains Mono',monospace;cursor:pointer;text-align:center;transition:all 0.15s;}
+#export-btn:hover{background:#5e1774;border-color:#f472b6;}
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:#09050d;}
+::-webkit-scrollbar-thumb{background:#3c123c;border-radius:2px;}
