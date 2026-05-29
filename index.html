@@ -24,14 +24,21 @@
       </div>
       <div class="tool-row" style="margin-top:6px;">
         <button class="tool-btn" onclick="setPathMode('bezier')" id="pm-bezier-s" style="flex:1">〜 Bézier</button>
-        <button class="tool-btn" onclick="setPathMode('cubic')" id="pm-cubic-s" style="flex:1">≈ Cubic</button>
         <button class="tool-btn" onclick="setPathMode('linear')" id="pm-linear-s" style="flex:1">/ Linear</button>
+      </div>
+      <div class="tool-row" style="margin-top:6px;">
+        <button class="tool-btn" id="btn-play" onclick="toggleAnimation()" style="flex:1">▶ Play</button>
+        <button class="tool-btn" onclick="resetAnimation()" style="flex:1">↺ Reset</button>
+      </div>
+      <div class="tool-row" style="margin-top:6px; gap: 8px; align-items: center;">
+        <label for="speed-range" style="font-size:9px;color:#b295c6;font-family:'JetBrains Mono',monospace;white-space:nowrap;width:46px;">Speed</label>
+        <input id="speed-range" type="range" min="0.2" max="3" step="0.05" value="1" style="flex:1;">
       </div>
       <div class="tool-row" style="margin-top:6px;">
         <button class="tool-btn danger" onclick="clearAll()" style="flex:1">⌫ Clear All</button>
       </div>
     </div>
-    <div class="section-label">Poses</div>
+    <div class="section-label">Path Elements</div>
     <div id="pose-list"></div>
     <button id="export-btn" onclick="exportJSON()">⬇ Export WPILib JSON</button>
     <div id="inspector">
@@ -43,10 +50,34 @@
     <canvas id="c"></canvas>
     <div id="hint">Click to place · Drag to move · Scroll on pose to rotate · Right-click to delete</div>
     <div id="status"></div>
+    <button id="settings-btn" title="System constraints">⚙</button>
     <div id="zoom-controls">
       <button class="zoom-btn" onclick="zoom(1.2)">+</button>
       <button class="zoom-btn" onclick="zoom(0.833)">−</button>
       <button class="zoom-btn" onclick="resetView()" style="font-size:11px;" title="Reset view">⌂</button>
+    </div>
+    <div id="settings-panel" class="hidden">
+      <div class="settings-header">
+        <span>System Constraints</span>
+        <button id="settings-close" title="Close">✕</button>
+      </div>
+      <div class="settings-row">
+        <label>Max velocity</label>
+        <input id="sys-max-vel" type="number" step="0.1" value="4.5"> m/s
+      </div>
+      <div class="settings-row">
+        <label>Max acceleration</label>
+        <input id="sys-max-accel" type="number" step="0.1" value="7.0"> m/s²
+      </div>
+      <div class="settings-row">
+        <label>Max angular velocity</label>
+        <input id="sys-max-ang-vel" type="number" step="1" value="720"> deg/s
+      </div>
+      <div class="settings-row">
+        <label>Max angular acceleration</label>
+        <input id="sys-max-ang-accel" type="number" step="1" value="1440"> deg/s²
+      </div>
+      <button id="settings-save-btn" class="tool-btn" style="width:100%;margin-top:8px;">Save defaults</button>
     </div>
   </div>
 </div>
