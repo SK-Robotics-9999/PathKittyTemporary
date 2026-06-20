@@ -520,6 +520,85 @@ function cpFor(p0, p1) {
   };
 }
 
+function roundExportNumber(value) {
+  return parseFloat(value.toFixed(9));
+}
+
+function cubicPolynomialCoefficients(p0, p1, p2, p3) {
+  return {
+    cubic: roundExportNumber(-p0 + 3 * p1 - 3 * p2 + p3),
+    quadratic: roundExportNumber(3 * p0 - 6 * p1 + 3 * p2),
+    linear: roundExportNumber(-3 * p0 + 3 * p1),
+    constant: roundExportNumber(p0)
+  };
+}
+
+function polynomialEquation(axis, coefficients) {
+  const { cubic, quadratic, linear, constant } = coefficients;
+  return `${axis}(t) = ${cubic} * t^3 + ${quadratic} * t^2 + ${linear} * t + ${constant}`;
+}
+
+function buildBezierCurveExport() {
+  if (pathMode !== 'bezier' && pathMode !== 'cubic') {
+    return null;
+  }
+
+  const segments = [];
+
+  for (let i = 0; i < poses.length - 1; i++) {
+    const start = poses[i];
+    const end = poses[i + 1];
+    const cp = cpFor(start, end);
+    const controlPoints = [
+      { x: start.x, y: start.y },
+      { x: cp.cp0x, y: cp.cp0y },
+      { x: cp.cp1x, y: cp.cp1y },
+      { x: end.x, y: end.y }
+    ].map(point => ({
+      x: roundExportNumber(point.x),
+      y: roundExportNumber(point.y)
+    }));
+    const x = cubicPolynomialCoefficients(
+      controlPoints[0].x,
+      controlPoints[1].x,
+      controlPoints[2].x,
+      controlPoints[3].x
+    );
+    const y = cubicPolynomialCoefficients(
+      controlPoints[0].y,
+      controlPoints[1].y,
+      controlPoints[2].y,
+      controlPoints[3].y
+    );
+
+    segments.push({
+      segment_index: i,
+      start_ordinal: i,
+      end_ordinal: i + 1,
+      parameter: {
+        name: 't',
+        minimum: 0,
+        maximum: 1
+      },
+      control_points_meters: controlPoints,
+      polynomial_coefficients_meters: { x, y },
+      equations: {
+        x: polynomialEquation('x', x),
+        y: polynomialEquation('y', y)
+      }
+    });
+  }
+
+  return {
+    type: 'piecewise_cubic_bezier',
+    schema_version: 1,
+    coefficient_order: ['cubic', 'quadratic', 'linear', 'constant'],
+    evaluation: 'position(t) = cubic*t^3 + quadratic*t^2 + linear*t + constant',
+    units: 'meters',
+    segments
+  };
+}
+
 function getControlPointAt(cx, cy, r = 8) {
   if ((pathMode !== 'bezier' && pathMode !== 'cubic') || poses.length < 2) {
     return null;
@@ -1047,7 +1126,8 @@ function exportJSON() {
 
   const data = {
     path_elements: pathElements,
-    constraints
+    constraints,
+    bezier_curve: buildBezierCurveExport()
   };
 
   const blob = new Blob([JSON.stringify(data, null, 2)], {
