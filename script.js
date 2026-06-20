@@ -599,6 +599,167 @@ function buildBezierCurveExport() {
   };
 }
 
+function choosePathFile() {
+  document.getElementById('import-file').click();
+}
+
+function constraintForSegment(constraints, key, segmentIndex) {
+  const entries = constraints?.[key];
+  if (!Array.isArray(entries)) {
+    return null;
+  }
+
+  const match = entries.find(entry =>
+    Number.isFinite(entry?.value) &&
+    Number.isInteger(entry?.start_ordinal) &&
+    Number.isInteger(entry?.end_ordinal) &&
+    entry.start_ordinal <= segmentIndex &&
+    entry.end_ordinal >= segmentIndex + 1
+  );
+
+  return match ? match.value : null;
+}
+
+function importPathData(data) {
+  if (!data || !Array.isArray(data.path_elements)) {
+    throw new Error('This file does not contain a path_elements array.');
+  }
+
+  const waypointElements = data.path_elements.filter(element => element?.type === 'waypoint');
+  const savedPoseNames = data.editor_metadata?.pose_names;
+  const importedPoses = waypointElements.map((element, index) => {
+    const x = element?.translation_target?.x_meters;
+    const y = element?.translation_target?.y_meters;
+    const heading = element?.rotation_target?.rotation_radians ?? 0;
+
+    if (![x, y, heading].every(Number.isFinite)) {
+      throw new Error(`Waypoint ${index + 1} has invalid coordinates or rotation.`);
+    }
+
+    return {
+      id: index,
+      x,
+      y,
+      heading,
+      name: typeof savedPoseNames?.[index] === 'string'
+        ? savedPoseNames[index]
+        : `Pose ${index + 1}`,
+      type: 'waypoint',
+      inHandle: null,
+      outHandle: null,
+      maxVel: null,
+      maxAccel: null,
+      maxAngularVel: null,
+      maxAngularAccel: null
+    };
+  });
+
+  const constraints = data.constraints || {};
+  for (let i = 0; i < importedPoses.length - 1; i++) {
+    importedPoses[i].maxVel = constraintForSegment(
+      constraints,
+      'max_velocity_meters_per_sec',
+      i
+    );
+    importedPoses[i].maxAccel = constraintForSegment(
+      constraints,
+      'max_acceleration_meters_per_sec_sq',
+      i
+    );
+
+    const angularVelocity = constraintForSegment(
+      constraints,
+      'max_angular_velocity_radians_per_sec',
+      i
+    );
+    const angularAcceleration = constraintForSegment(
+      constraints,
+      'max_angular_acceleration_radians_per_sec_sq',
+      i
+    );
+    importedPoses[i].maxAngularVel = angularVelocity == null
+      ? null
+      : angularVelocity * 180 / Math.PI;
+    importedPoses[i].maxAngularAccel = angularAcceleration == null
+      ? null
+      : angularAcceleration * 180 / Math.PI;
+  }
+
+  const curveSegments = data.bezier_curve?.segments;
+  if (Array.isArray(curveSegments)) {
+    curveSegments.forEach((segment, fallbackIndex) => {
+      const segmentIndex = Number.isInteger(segment?.segment_index)
+        ? segment.segment_index
+        : fallbackIndex;
+      const points = segment?.control_points_meters;
+
+      if (
+        segmentIndex < 0 ||
+        segmentIndex >= importedPoses.length - 1 ||
+        !Array.isArray(points) ||
+        points.length !== 4 ||
+        !points.every(point => Number.isFinite(point?.x) && Number.isFinite(point?.y))
+      ) {
+        throw new Error(`Bezier segment ${fallbackIndex + 1} is invalid.`);
+      }
+
+      const start = importedPoses[segmentIndex];
+      const end = importedPoses[segmentIndex + 1];
+      start.outHandle = {
+        x: points[1].x - start.x,
+        y: points[1].y - start.y
+      };
+      end.inHandle = {
+        x: points[2].x - end.x,
+        y: points[2].y - end.y
+      };
+    });
+  }
+
+  poses = importedPoses;
+  const savedSystemConstraints = data.editor_metadata?.system_constraints;
+  if (savedSystemConstraints) {
+    ['maxVel', 'maxAccel', 'maxAngularVel', 'maxAngularAccel'].forEach(key => {
+      if (Number.isFinite(savedSystemConstraints[key])) {
+        systemConstraints[key] = savedSystemConstraints[key];
+      }
+    });
+  }
+  idCounter = importedPoses.length;
+  selected = importedPoses[0]?.id ?? null;
+  selectedSegment = null;
+  animation.active = false;
+  animation.currentTime = 0;
+  animation.lastTime = 0;
+  document.getElementById('btn-play').textContent = '▶ Play';
+  refreshTypes();
+  setPathMode(data.path_mode === 'linear' ? 'linear' : 'bezier');
+  markPathDirty();
+  updateSidebar();
+  resetView();
+}
+
+async function importJSONFile(event) {
+  const input = event.target;
+  const file = input.files?.[0];
+  if (!file) {
+    return;
+  }
+
+  try {
+    if (poses.length > 0 && !confirm('Replace the current path with this file?')) {
+      return;
+    }
+
+    const data = JSON.parse(await file.text());
+    importPathData(data);
+  } catch (error) {
+    alert(`Could not open path file: ${error.message}`);
+  } finally {
+    input.value = '';
+  }
+}
+
 function getControlPointAt(cx, cy, r = 8) {
   if ((pathMode !== 'bezier' && pathMode !== 'cubic') || poses.length < 2) {
     return null;
@@ -1125,9 +1286,15 @@ function exportJSON() {
   });
 
   const data = {
+    path_mode: pathMode,
     path_elements: pathElements,
     constraints,
-    bezier_curve: buildBezierCurveExport()
+    bezier_curve: buildBezierCurveExport(),
+    editor_metadata: {
+      schema_version: 1,
+      pose_names: poses.map(pose => pose.name),
+      system_constraints: { ...systemConstraints }
+    }
   };
 
   const blob = new Blob([JSON.stringify(data, null, 2)], {
@@ -1366,6 +1533,7 @@ document.getElementById('settings-save-btn').onclick = saveSystemConstraints;
 document.getElementById('settings-btn').onclick = openSettings;
 document.getElementById('settings-close').onclick = closeSettings;
 document.getElementById('settings-save-btn').onclick = saveSystemConstraints;
+document.getElementById('import-file').onchange = importJSONFile;
 document.getElementById('speed-range').oninput = e => {
   animation.playbackRate = parseFloat(e.target.value);
 };

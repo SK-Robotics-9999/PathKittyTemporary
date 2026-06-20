@@ -52,8 +52,9 @@ canvas{display:block;}
 #settings-close{background:none;border:none;color:#d8c9e9;cursor:pointer;font-size:14px;}
 .zoom-btn{width:28px;height:28px;background:#120819;border:1px solid #2d0d2c;border-radius:4px;color:#b9a1d6;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;font-family:'JetBrains Mono',monospace;}
 .zoom-btn:hover{background:#2a0f33;color:#f9c1e9;border-color:#f472b6;}
-#export-btn{margin:8px 10px 10px;padding:7px;background:#3b0f3a;border:1px solid #8b5cf6;border-radius:5px;color:#f9c1e9;font-size:10px;font-family:'JetBrains Mono',monospace;cursor:pointer;text-align:center;transition:all 0.15s;}
-#export-btn:hover{background:#5e1774;border-color:#f472b6;}
+#import-btn,#export-btn{margin:8px 10px 0;padding:7px;background:#3b0f3a;border:1px solid #8b5cf6;border-radius:5px;color:#f9c1e9;font-size:10px;font-family:'JetBrains Mono',monospace;cursor:pointer;text-align:center;transition:all 0.15s;}
+#export-btn{margin-bottom:10px;}
+#import-btn:hover,#export-btn:hover{background:#5e1774;border-color:#f472b6;}
 .segment-item{background:#11061a;}
 .segment-item .pose-dot.constraint{background:#60a5fa;}
 .segment-item .pose-name{color:#93c5fd;}
